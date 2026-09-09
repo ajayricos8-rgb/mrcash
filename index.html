@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PulseScope — Deriv Tick Analytics</title>
+  <style>
+    :root{--bg:#07111f;--line:#203754;--muted:#8ea2bd;--text:#e8f0fb;--cyan:#5fe1d4;--blue:#74a7ff;--good:#66d991;--warn:#ffc968;--bad:#ff8197}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 10% 0,#132a49 0,#07111f 40%),#07111f;color:var(--text);font:14px Inter,system-ui,sans-serif}
+    header{padding:25px max(22px,calc((100% - 1420px)/2));display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
+    h1{margin:0;font-size:22px}h1 span{color:var(--cyan)}.subtitle{color:var(--muted);margin-top:4px}
+    .pill{font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;color:var(--cyan);background:#0d2034}
+    .wrap{max-width:1420px;margin:auto;padding:20px}.controls,.grid{display:grid;gap:14px}
+    .controls{grid-template-columns:1.2fr 1fr 1fr 1fr auto;margin-bottom:16px}.grid{grid-template-columns:1.2fr .8fr .8fr}
+    .card{background:linear-gradient(145deg,#0e1d31,#0a1727);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .card h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#b7c7de;margin:0 0 14px}
+    label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+    select,input,button{font:inherit}select,input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#091626;color:var(--text)}
+    button{align-self:end;padding:10px 15px;border:0;border-radius:8px;background:var(--cyan);color:#032022;font-weight:750;cursor:pointer}
+    .price{font-size:34px;font-weight:750}.tick{color:var(--muted);margin-top:5px}.chart{width:100%;height:210px;background:#081525;border-radius:8px}
+    .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}.metric{padding:10px;background:#091626;border-radius:8px}
+    .metric b{display:block;font-size:18px;margin-top:3px}.metric span{font-size:11px;color:var(--muted);text-transform:uppercase}
+    .signal{display:flex;align-items:center;gap:12px;padding:13px;background:#091626;border-radius:10px;margin:8px 0}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}.signal strong{display:block}.signal small{color:var(--muted)}
+    .bar{height:7px;background:#192b43;border-radius:6px;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+    .matrix{display:grid;grid-template-columns:42px repeat(10,1fr);gap:3px;font-size:10px;text-align:center}.matrix div{padding:6px 1px;border-radius:3px;background:#102039}.matrix .head{background:transparent;color:var(--muted)}
+    .digit-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.digit{background:#102039;border-radius:6px;padding:8px 2px;text-align:center}.digit b{display:block;font-size:15px}.digit small{color:var(--muted)}
+    .wide{grid-column:span 2}.log{max-height:210px;overflow:auto;font-family:monospace;color:#a8bbd4;line-height:1.8}
+    .notice{color:#b8c9df;background:#102440;border-left:3px solid var(--warn);padding:11px 13px;border-radius:5px;margin:16px 0}
+    .score{font-size:42px;font-weight:800}.high{color:var(--good)}.mid{color:var(--warn)}.low{color:var(--bad)}
+    .badge{float:right;padding:3px 7px;border-radius:10px;background:#19314d;color:var(--cyan);font-size:11px}
+    @media(max-width:850px){.controls,.grid{grid-template-columns:1fr}.wide{grid-column:auto}.metrics{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Pulse<span>Scope</span></h1>
+    <div class="subtitle">Exploratory tick-pattern analytics for Deriv continuous indices</div>
+  </div>
+  <div id="status" class="pill">● Demo data</div>
+</header>
+
+<main class="wrap">
+  <div class="notice">
+    Research dashboard only. Tick indicators and historical transitions do not guarantee a trading outcome. Test on demo data before risking money.
+  </div>
+
+  <section class="controls card">
+    <div>
+      <label>Data source</label>
+      <select id="source">
+        <option value="demo">Demo stream</option>
+        <option value="deriv">Deriv public ticks</option>
+      </select>
+    </div>
+    <div>
+      <label>Symbol</label>
+      <select id="symbol">
+        <option value="1HZ100V">Volatility 100 (1s)</option>
+        <option value="R_100">Volatility 100</option>
+        <option value="1HZ10V">Volatility 10 (1s)</option>
+        <option value="R_50">Volatility 50</option>
+      </select>
+    </div>
+    <div>
+      <label>Lookback ticks</label>
+      <input id="lookback" type="number" min="50" max="5000" value="500">
+    </div>
+    <div>
+      <label>Threshold (O/U)</label>
+      <select id="threshold">
+        <option>0</option><option>1</option><option>2</option><option>3</option>
+        <option selected>4</option><option>5</option><option>6</option><option>7</option>
+        <option>8</option><option>9</option>
+      </select>
+    </div>
+    <button id="connect">Start scan</button>
+  </section>
+
+  <section class="grid">
+    <article class="card wide">
+      <h2>Live price <span id="sourceTag" class="badge">SIMULATED</span></h2>
+      <div class="price" id="price">—</div>
+      <div class="tick" id="tickInfo">Waiting for ticks</div>
+      <canvas class="chart" id="chart"></canvas>
+      <div class="metrics">
+        <div class="metric"><span>RSI (14)</span><b id="rsi">—</b></div>
+        <div class="metric"><span>Momentum (10)</span><b id="momentum">—</b></div>
+        <div class="metric"><span>Volatility</span><b id="vol">—</b></div>
+        <div class="metric"><span>Current streak</span><b id="streak">—</b></div>
+        <div class="metric"><span>Samples</span><b id="samples">0</b></div>
+        <div class="metric"><span>Entropy</span><b id="entropy">—</b></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <h2>Composite evidence</h2>
+      <div class="score" id="score">—</div>
+      <div id="verdict" class="tick">Collecting a sample…</div>
+      <div class="bar"><i id="scoreBar" style="width:0%"></i></div>
+      <div id="signals"></div>
+    </article>
+
+    <article class="card">
+      <h2>Last-digit distribution</h2>
+      <div id="digits" class="digit-grid"></div>
+      <div class="tick" id="digitSummary"></div>
+    </article>
+
+    <article class="card wide">
+      <h2>Digit transition matrix <span class="badge">P(next digit | current digit)</span></h2>
+      <div id="matrix" class="matrix"></div>
+    </article>
+
+    <article class="card">
+      <h2>Contract lenses</h2>
+      <div id="contractSignals"></div>
+    </article>
+
+    <article class="card">
+      <h2>Pattern & event log</h2>
+      <div id="log" class="log"></div>
+    </article>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const state = { ticks: [], ws: null, timer: null };
+
+  const fmt = n => Number(n).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4
+  });
+
+  function lastDigit(q) {
+    return +String(q).replace(/\D/g, "").slice(-1);
+  }
+
+  function demoTick() {
+    let p = state.ticks.length ? state.ticks.at(-1).quote : 1000;
+    p += ((Math.random() - 0.5) * 1.7) + (Math.random() < 0.54 ? 0.06 : -0.06);
+    addTick(+p.toFixed(4), Date.now() / 1000);
+  }
+
+  function rsi(a, n = 14) {
+    if (a.length <= n) return null;
+    let gain = 0, loss = 0;
+
+    for (let i = a.length - n; i < a.length; i++) {
+      const d = a[i] - a[i - 1];
+      if (d > 0) gain += d;
+      else loss -= d;
+    }
+
+    return loss === 0 ? 100 : 100 - (100 / (1 + gain / loss));
+  }
+
+  function runs(ds) {
+    let k = 1;
+    for (let i = ds.length - 1; i > 0 && ds[i] === ds[i - 1]; i--) k++;
+    return k;
+  }
+
+  function transition(ds) {
+    const matrix = Array.from({ length: 10 }, () => Array(10).fill(0));
+    for (let i = 1; i < ds.length; i++) matrix[ds[i - 1]][ds[i]]++;
+    return matrix;
+  }
+
+  function analyze() {
+    const N = Math.min(+$("lookback").value || 500, state.ticks.length);
+    const a = state.ticks.slice(-N);
+    if (!a.length) return;
+
+    const quotes = a.map(x => x.quote);
+    const digits = quotes.map(lastDigit);
+    const current = digits.at(-1);
+
+    const T = transition(digits);
+    const row = T[current];
+    const total = row.reduce((x, y) => x + y, 0);
+    const probabilities = row.map(v => total ? v / total : 0);
+    const nextWinner = probabilities.indexOf(Math.max(...probabilities));
+
+    const frequency = Array(10).fill(0);
+    digits.forEach(d => frequency[d]++);
+
+    const probabilitiesDigits = frequency.map(v => v / digits.length);
+    const entropy = -probabilitiesDigits.reduce(
+      (sum, p) => sum + (p ? p * Math.log2(p) : 0), 0
+    );
+
+    const currentRsi = rsi(quotes);
+    const momentum = quotes.length > 10 ? quotes.at(-1) - quotes.at(-11) : 0;
+    const moves = quotes.slice(1).map((v, i) => v - quotes[i]);
+    const volatility = Math.sqrt(
+      moves.reduce((sum, x) => sum + x * x, 0) / Math.max(1, moves.length)
+    );
+
+    const even = digits.filter(d => d % 2 === 0).length / digits.length;
+    const threshold = +$("threshold").value;
+    const over = digits.filter(d => d > threshold).length / digits.length;
+    const up = moves.filter(v => v > 0).length / Math.max(1, moves.length);
+    const streak = runs(digits);
+
+    const transitionBias = total ? Math.max(...probabilities) - 0.1 : 0;
+    const trend = Math.min(
+      0.2,
+      Math.abs(up - 0.5) + Math.abs((currentRsi ?? 50) - 50) / 250
+    );
+
+    const score = Math.round(
+      Math.min(99, Math.max(1, (transitionBias * 0.55 + trend * 0.45) * 210))
+    );
+
+    $("price").textContent = fmt(quotes.at(-1));
+    $("tickInfo").textContent =
+      `Last digit ${current} · ${new Date(a.at(-1).epoch * 1000).toLocaleTimeString()} · ${N}-tick window`;
+
+    $("rsi").textContent = currentRsi ? currentRsi.toFixed(1) : "—";
+    $("momentum").textContent = (momentum >= 0 ? "+" : "") + momentum.toFixed(3);
+    $("vol").textContent = volatility.toFixed(3);
+    $("streak").textContent = `${streak}× digit ${current}`;
+    $("samples").textContent = N;
+    $("entropy").textContent = entropy.toFixed(2) + " / 3.32";
+
+    $("score").textContent = score + "/100";
+    $("score").className = "score " + (score > 65 ? "high" : score > 38 ? "mid" : "low");
+    $("scoreBar").style.width = score + "%";
+
+    $("verdict").textContent =
+      score > 65
+        ? "A detectable but unverified bias — validate out of sample."
+        : score > 38
+          ? "Weak evidence — no actionable confidence."
+          : "No meaningful edge detected.";
+
+    const signalRows = [
+      ["Transition", `After ${current}, digit ${nextWinner} occurred ${(probabilities[nextWinner] * 100).toFixed(1)}% of ${total} observations.`],
+      ["Momentum", `${(up * 100).toFixed(1)}% up ticks; RSI ${currentRsi ? currentRsi.toFixed(1) : "n/a"}.`],
+      ["Streak", `${streak} consecutive ${current}s.`]
+    ];
+
+    $("signals").innerHTML = signalRows.map(([name, detail]) => `
+      <div class="signal">
+        <i class="dot"></i>
+        <div><strong>${name}</strong><small>${detail}</small></div>
+      </div>
+    `).join("");
+
+    $("digits").innerHTML = frequency.map((value, digit) => `
+      <div class="digit"><b>${digit}</b><small>${(value / N * 100).toFixed(1)}%</small></div>
+    `).join("");
+
+    $("digitSummary").textContent =
+      `Most frequent: ${frequency.indexOf(Math.max(...frequency))} · Expected near 10% each in a uniform sequence.`;
+
+    $("matrix").innerHTML =
+      '<div class="head"></div>' +
+      Array.from({ length: 10 }, (_, i) => `<div class="head">${i}</div>`).join("") +
+      T.map((r, i) =>
+        `<div class="head">${i}</div>` +
+        r.map(v => {
+          const rowTotal = r.reduce((x, y) => x + y, 0);
+          const percent = rowTotal ? Math.round(v / rowTotal * 100) : "—";
+          const intensity = Math.min(.82, .08 + v / Math.max(1, ...r) * .74);
+          return `<div style="background:rgba(95,225,212,${intensity})">${percent}</div>`;
+        }).join("")
+      ).join("");
+
+    const prediction = (name, value, detail) => `
+      <div class="signal">
+        <i class="dot" style="background:${value > .55 ? "var(--good)" : "var(--warn)"}"></i>
+        <div><strong>${name}: ${(value * 100).toFixed(1)}%</strong><small>${detail}</small></div>
+      </div>`;
+
+    $("contractSignals").innerHTML =
+      prediction("Rise / Fall", Math.max(up, 1 - up),
+        `${up >= .5 ? "Rise" : "Fall"} frequency in window; this is not a forecast.`) +
+      prediction("Even / Odd", Math.max(even, 1 - even),
+        `${even >= .5 ? "Even" : "Odd"} occurred more often.`) +
+      prediction(`Over / Under ${threshold}`, Math.max(over, 1 - over),
+        `${over >= .5 ? "Over" : "Under"} frequency in window.`) +
+      prediction("Matches", probabilities[nextWinner],
+        `Highest observed next-digit transition: ${nextWinner}.`);
+
+    $("log").innerHTML = [
+      `[${new Date().toLocaleTimeString()}] Window recalculated`,
+      `Current digit ${current} → strongest observed transition: ${nextWinner} (${(probabilities[nextWinner] * 100).toFixed(1)}%)`,
+      `Entropy ${entropy.toFixed(3)}; ${entropy > 3.2 ? "distribution is near-uniform." : "distribution differs from uniform in this sample."}`,
+      "No automated trade execution is included."
+    ].map(x => `<div>${x}</div>`).join("");
+
+    draw(quotes);
+  }
+
+  function draw(data) {
+    const canvas = $("chart");
+    const ctx = canvas.getContext("2d");
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+
+    ctx.clearRect(0, 0, width, height);
+    if (data.length < 2) return;
+
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+
+    ctx.strokeStyle = "#18304d";
+    for (let i = 1; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, height * i / 5);
+      ctx.lineTo(width, height * i / 5);
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    data.forEach((value, i) => {
+      const x = i * width / (data.length - 1);
+      const y = height - ((value - min) / range) * (height - 24) - 12;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+
+    ctx.strokeStyle = "#5fe1d4";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function addTick(quote, epoch) {
+    state.ticks.push({ quote, epoch });
+    if (state.ticks.length > 5000) state.ticks.shift();
+    analyze();
+  }
+
+  function stop() {
+    if (state.ws) {
+      state.ws.close();
+      state.ws = null;
+    }
+    clearInterval(state.timer);
+    state.timer = null;
+  }
+
+  function start() {
+    stop();
+    state.ticks = [];
+
+    const live = $("source").value === "deriv";
+    $("sourceTag").textContent = live ? "DERIV PUBLIC DATA" : "SIMULATED";
+
+    if (!live) {
+      $("status").textContent = "● Demo stream";
+      for (let i = 0; i < 200; i++) demoTick();
+      state.timer = setInterval(demoTick, 700);
+      return;
+    }
+
+    $("status").textContent = "● Connecting…";
+    state.ws = new WebSocket("wss://ws.binaryws.com/websockets/v3");
+
+    state.ws.onopen = () => {
+      state.ws.send(JSON.stringify({
+        ticks_history: $("symbol").value,
+        count: 500,
+        end: "latest",
+        style: "ticks",
+        req_id: 1
+      }));
+
+      state.ws.send(JSON.stringify({
+        ticks: $("symbol").value,
+        subscribe: 1,
+        req_id: 2
+      }));
+
+      $("status").textContent = "● Live public ticks";
+    };
+
+    state.ws.onmessage = event => {
+      const data = JSON.parse(event.data);
+
+      if (data.msg_type === "history") {
+        data.history.prices.forEach((price, i) => {
+          addTick(+price, data.history.times[i]);
+        });
+      }
+
+      if (data.msg_type === "tick") {
+        addTick(data.tick.quote, data.tick.epoch);
+      }
+    };
+
+    state.ws.onerror = () => {
+      $("status").textContent = "● Connection failed — choose Demo";
+    };
+
+    state.ws.onclose = () => {
+      if ($("source").value === "deriv") {
+        $("status").textContent = "● Disconnected";
+      }
+    };
+  }
+
+  $("connect").onclick = start;
+  $("lookback").onchange = analyze;
+  $("threshold").onchange = analyze;
+  window.onresize = analyze;
+
+  start();
+})();
+</script>
+</body>
+</html>
