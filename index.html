@@ -11,26 +11,50 @@
     header{padding:25px max(22px,calc((100% - 1420px)/2));display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
     h1{margin:0;font-size:22px}h1 span{color:var(--cyan)}.subtitle{color:var(--muted);margin-top:4px}
     .pill{font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;color:var(--cyan);background:#0d2034}
+    .pill.connected{color:var(--good);background:#0d2d1a}
+    .pill.error{color:var(--bad);background:#2d0d0d}
     .wrap{max-width:1420px;margin:auto;padding:20px}.controls,.grid{display:grid;gap:14px}
     .controls{grid-template-columns:1.2fr 1fr 1fr 1fr auto;margin-bottom:16px}.grid{grid-template-columns:1.2fr .8fr .8fr}
     .card{background:linear-gradient(145deg,#0e1d31,#0a1727);border:1px solid var(--line);border-radius:14px;padding:16px}
     .card h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#b7c7de;margin:0 0 14px}
     label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
     select,input,button{font:inherit}select,input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#091626;color:var(--text)}
-    button{align-self:end;padding:10px 15px;border:0;border-radius:8px;background:var(--cyan);color:#032022;font-weight:750;cursor:pointer}
+    button{align-self:end;padding:10px 15px;border:0;border-radius:8px;background:var(--cyan);color:#032022;font-weight:750;cursor:pointer;transition:all .2s}
+    button:hover{background:#4dd4c9;transform:translateY(-1px)}
+    button:disabled{background:var(--muted);cursor:not-allowed;opacity:.5}
     .price{font-size:34px;font-weight:750}.tick{color:var(--muted);margin-top:5px}.chart{width:100%;height:210px;background:#081525;border-radius:8px}
     .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}.metric{padding:10px;background:#091626;border-radius:8px}
     .metric b{display:block;font-size:18px;margin-top:3px}.metric span{font-size:11px;color:var(--muted);text-transform:uppercase}
     .signal{display:flex;align-items:center;gap:12px;padding:13px;background:#091626;border-radius:10px;margin:8px 0}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}.signal strong{display:block}.signal small{color:var(--muted)}
     .bar{height:7px;background:#192b43;border-radius:6px;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan))}
-    .matrix{display:grid;grid-template-columns:42px repeat(10,1fr);gap:3px;font-size:10px;text-align:center}.matrix div{padding:6px 1px;border-radius:3px;background:#102039}.matrix .head{background:transparent;color:var(--muted)}
-    .digit-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.digit{background:#102039;border-radius:6px;padding:8px 2px;text-align:center}.digit b{display:block;font-size:15px}.digit small{color:var(--muted)}
+    .matrix{display:grid;grid-template-columns:42px repeat(10,1fr);gap:3px;font-size:10px;text-align:center}.matrix div{padding:6px 1px;border-radius:3px;background:#102039}.matrix .head{background:#132a49;color:var(--cyan);font-weight:600}
+    .digit-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}.digit{background:#102039;border-radius:6px;padding:8px 2px;text-align:center}.digit b{display:block;font-size:15px}
     .wide{grid-column:span 2}.log{max-height:210px;overflow:auto;font-family:monospace;color:#a8bbd4;line-height:1.8}
     .notice{color:#b8c9df;background:#102440;border-left:3px solid var(--warn);padding:11px 13px;border-radius:5px;margin:16px 0}
     .score{font-size:42px;font-weight:800}.high{color:var(--good)}.mid{color:var(--warn)}.low{color:var(--bad)}
     .badge{float:right;padding:3px 7px;border-radius:10px;background:#19314d;color:var(--cyan);font-size:11px}
-    @media(max-width:850px){.controls,.grid{grid-template-columns:1fr}.wide{grid-column:auto}.metrics{grid-template-columns:repeat(2,1fr)}}
+    
+    /* Auth Modal Styles */
+    .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,17,31,.8);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center}
+    .modal-overlay.active{display:flex}
+    .modal{background:linear-gradient(145deg,#0e1d31,#0a1727);border:1px solid var(--line);border-radius:14px;padding:30px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+    .modal h2{margin:0 0 20px;font-size:18px;color:var(--cyan)}
+    .modal-field{margin-bottom:16px}
+    .modal-field label{display:block;margin-bottom:8px;font-size:11px;color:var(--muted);text-transform:uppercase}
+    .modal-field input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#091626;color:var(--text);font-size:13px}
+    .modal-field small{display:block;margin-top:6px;color:var(--muted);font-size:11px}
+    .modal-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+    .modal-buttons button{margin:0;width:100%}
+    .modal-buttons .cancel{background:var(--line);color:var(--text)}
+    .status-badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:12px}
+    .status-badge.authenticated{background:#0d2d1a;color:var(--good)}
+    .status-badge.unauthenticated{background:#2d0d0d;color:var(--bad)}
+    .connection-info{background:#091626;padding:12px;border-radius:8px;margin-bottom:12px;font-size:12px;line-height:1.6;border-left:3px solid var(--cyan)}
+    .connection-info.error{border-left-color:var(--bad)}
+    .connection-info code{background:#132a49;padding:2px 6px;border-radius:3px;color:var(--cyan);font-family:monospace}
+    
+    @media(max-width:850px){.controls,.grid{grid-template-columns:1fr}.wide{grid-column:auto}.metrics{grid-template-columns:repeat(2,1fr)}.modal{padding:20px;max-width:90vw}}
   </style>
 </head>
 <body>
@@ -39,7 +63,10 @@
     <h1>Pulse<span>Scope</span></h1>
     <div class="subtitle">Exploratory tick-pattern analytics for Deriv continuous indices</div>
   </div>
-  <div id="status" class="pill">● Demo data</div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <button id="authBtn" style="align-self:center;margin:0;padding:8px 12px;font-size:12px">Connect Deriv</button>
+    <div id="status" class="pill">● Demo data</div>
+  </div>
 </header>
 
 <main class="wrap">
@@ -53,6 +80,7 @@
       <select id="source">
         <option value="demo">Demo stream</option>
         <option value="deriv">Deriv public ticks</option>
+        <option value="authenticated">Authenticated (requires connection)</option>
       </select>
     </div>
     <div>
@@ -82,6 +110,7 @@
   <section class="grid">
     <article class="card wide">
       <h2>Live price <span id="sourceTag" class="badge">SIMULATED</span></h2>
+      <div id="authStatus"></div>
       <div class="price" id="price">—</div>
       <div class="tick" id="tickInfo">Waiting for ticks</div>
       <canvas class="chart" id="chart"></canvas>
@@ -126,15 +155,243 @@
   </section>
 </main>
 
+<!-- Authentication Modal -->
+<div id="authModal" class="modal-overlay">
+  <div class="modal">
+    <h2>🔐 Connect Deriv Account</h2>
+    
+    <div class="connection-info">
+      <strong>App ID:</strong> <code>34lVzR8IROjFvmgQbW8PX</code><br>
+      <small>Registered & configured for authenticated trading connections</small>
+    </div>
+
+    <div class="modal-field">
+      <label>Personal Access Token (PAT)</label>
+      <input id="patInput" type="password" placeholder="Paste your Deriv PAT here..." />
+      <small>
+        Get your token from: 
+        <a href="https://app.deriv.com/account/api-token/" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600">app.deriv.com/account/api-token/</a>
+        <br>
+        Required scopes: <strong>read, trade, payments</strong>
+      </small>
+    </div>
+
+    <div class="modal-field">
+      <label>Connection Type</label>
+      <select id="connectionType" style="margin-bottom:8px">
+        <option value="authenticated">Authenticated (Real/Demo Account)</option>
+        <option value="public">Public Ticks Only</option>
+      </select>
+      <small id="connTypeInfo">Connect to your Deriv account for live trading and account data access.</small>
+    </div>
+
+    <div id="connectionStatus" style="display:none;margin:12px 0"></div>
+
+    <div class="modal-buttons">
+      <button class="cancel" onclick="document.getElementById('authModal').classList.remove('active')">Cancel</button>
+      <button id="connectBtn" onclick="authenticateDeriv()">Connect</button>
+    </div>
+
+    <div id="authLog" style="margin-top:16px;padding:12px;background:#081525;border-radius:8px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:11px;color:#a8bbd4;display:none">
+    </div>
+  </div>
+</div>
+
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const state = { ticks: [], ws: null, timer: null };
+  const config = {
+    APP_ID: "34lVzR8IROjFvmgQbW8PX",
+    DERIV_WS_URL: "wss://ws.deriv.com/websockets/v3",
+    DERIV_PUBLIC_WS: "wss://ws.binaryws.com/websockets/v3"
+  };
+
+  const state = {
+    ticks: [],
+    ws: null,
+    timer: null,
+    authenticated: false,
+    accountInfo: null,
+    pat: null,
+    wsReqId: 1,
+    subscriptions: new Set()
+  };
 
   const fmt = n => Number(n).toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4
   });
+
+  function log(message) {
+    const authLog = $('authLog');
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] ${message}`;
+    authLog.innerHTML += logEntry + '\n';
+    authLog.scrollTop = authLog.scrollHeight;
+    console.log(logEntry);
+  }
+
+  function updateAuthStatus() {
+    const statusDiv = $('authStatus');
+    if (state.authenticated && state.accountInfo) {
+      statusDiv.innerHTML = `
+        <div class="status-badge authenticated">
+          ✓ Connected: ${state.accountInfo.loginid} (${state.accountInfo.is_virtual ? 'DEMO' : 'REAL'})
+        </div>
+        <div class="connection-info">
+          <strong>Balance:</strong> ${fmt(state.accountInfo.balance || 0)} ${state.accountInfo.currency || 'USD'}<br>
+          <strong>Account:</strong> ${state.accountInfo.loginid}<br>
+          <strong>Mode:</strong> ${state.accountInfo.is_virtual ? '🎮 Demo' : '💰 Real'}
+        </div>
+      `;
+    } else {
+      statusDiv.innerHTML = '<div class="status-badge unauthenticated">✗ Not Connected</div>';
+    }
+  }
+
+  function sendWsMessage(message) {
+    if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket not open');
+      return false;
+    }
+    state.ws.send(JSON.stringify(message));
+    return true;
+  }
+
+  function authenticateDeriv() {
+    const pat = $('patInput').value.trim();
+    const connType = $('connectionType').value;
+
+    if (!pat) {
+      alert('Please enter your Personal Access Token');
+      return;
+    }
+
+    state.pat = pat;
+    $('connectBtn').disabled = true;
+    $('authLog').style.display = 'block';
+    $('connectionStatus').innerHTML = '<div class="connection-info">Initializing connection...</div>';
+    $('connectionStatus').style.display = 'block';
+
+    log('Initiating WebSocket connection to Deriv...');
+    log(`App ID: ${config.APP_ID}`);
+    log(`Connection Type: ${connType}`);
+
+    state.ws = new WebSocket(`${config.DERIV_WS_URL}?app_id=${config.APP_ID}`);
+
+    state.ws.onopen = () => {
+      log('✓ WebSocket opened');
+      log('Sending authorization request...');
+
+      sendWsMessage({
+        authorize: pat
+      });
+    };
+
+    state.ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.msg_type === 'authorize') {
+        if (data.authorize) {
+          state.authenticated = true;
+          state.accountInfo = data.authorize;
+          log(`✓ Authorization successful`);
+          log(`Login ID: ${data.authorize.loginid}`);
+          log(`Currency: ${data.authorize.currency}`);
+          log(`Account Type: ${data.authorize.is_virtual ? 'Demo' : 'Real'}`);
+          log(`Balance: ${fmt(data.authorize.balance)}`);
+
+          $('connectionStatus').innerHTML = `
+            <div class="connection-info" style="border-left-color:var(--good)">
+              <strong>✓ Successfully Connected!</strong><br>
+              Account: ${data.authorize.loginid}<br>
+              Balance: ${fmt(data.authorize.balance)} ${data.authorize.currency}<br>
+              Mode: ${data.authorize.is_virtual ? '🎮 Demo Account' : '💰 Real Account'}
+            </div>
+          `;
+
+          updateAuthStatus();
+
+          // Update UI
+          $('sourceTag').textContent = `AUTHENTICATED - ${data.authorize.loginid}`;
+          $('status').textContent = `● Connected`;
+          $('status').className = 'pill connected';
+
+          // Enable authenticated source option
+          const sourceSelect = $('source');
+          if (sourceSelect.querySelector('option[value="authenticated"]')) {
+            sourceSelect.value = 'authenticated';
+          }
+
+          // Close modal after a short delay
+          setTimeout(() => {
+            $('authModal').classList.remove('active');
+            $('connectBtn').disabled = false;
+          }, 1500);
+
+        } else if (data.error) {
+          log(`✗ Authorization failed: ${data.error.message}`);
+          $('connectionStatus').innerHTML = `
+            <div class="connection-info error">
+              <strong>✗ Connection Failed</strong><br>
+              Error: ${data.error.message}<br>
+              <small>Check your PAT and try again</small>
+            </div>
+          `;
+          $('connectBtn').disabled = false;
+          if (state.ws) state.ws.close();
+        }
+      }
+
+      if (data.msg_type === 'tick') {
+        if (state.ticks.length < 5000) {
+          addTick(data.tick.quote, data.tick.epoch);
+        }
+      }
+
+      if (data.msg_type === 'history') {
+        if (data.history && data.history.prices) {
+          data.history.prices.forEach((price, i) => {
+            addTick(+price, data.history.times[i]);
+          });
+        }
+      }
+    };
+
+    state.ws.onerror = (error) => {
+      log(`✗ WebSocket error: ${error}`);
+      $('connectionStatus').innerHTML = `
+        <div class="connection-info error">
+          <strong>✗ Connection Error</strong><br>
+          Check your internet connection and try again
+        </div>
+      `;
+      $('connectBtn').disabled = false;
+    };
+
+    state.ws.onclose = () => {
+      log('WebSocket closed');
+      if (!state.authenticated) {
+        $('connectBtn').disabled = false;
+      }
+    };
+  }
+
+  $('authBtn').onclick = () => {
+    $('authModal').classList.add('active');
+    $('authLog').style.display = 'none';
+    $('connectionStatus').style.display = 'none';
+    $('patInput').focus();
+  };
+
+  $('connectionType').onchange = function() {
+    const info = $('connTypeInfo');
+    if (this.value === 'authenticated') {
+      info.textContent = 'Connect to your Deriv account for live trading and account data access.';
+    } else {
+      info.textContent = 'Stream public market data without authentication.';
+    }
+  };
 
   function lastDigit(q) {
     return +String(q).replace(/\D/g, "").slice(-1);
@@ -292,7 +549,7 @@
       `[${new Date().toLocaleTimeString()}] Window recalculated`,
       `Current digit ${current} → strongest observed transition: ${nextWinner} (${(probabilities[nextWinner] * 100).toFixed(1)}%)`,
       `Entropy ${entropy.toFixed(3)}; ${entropy > 3.2 ? "distribution is near-uniform." : "distribution differs from uniform in this sample."}`,
-      "No automated trade execution is included."
+      state.authenticated ? "Connected to Deriv authenticated account" : "Running in demo/public mode"
     ].map(x => `<div>${x}</div>`).join("");
 
     draw(quotes);
@@ -354,60 +611,82 @@
     stop();
     state.ticks = [];
 
-    const live = $("source").value === "deriv";
-    $("sourceTag").textContent = live ? "DERIV PUBLIC DATA" : "SIMULATED";
+    const mode = $("source").value;
 
-    if (!live) {
+    if (mode === 'demo') {
+      $("sourceTag").textContent = "SIMULATED";
       $("status").textContent = "● Demo stream";
+      $("status").className = 'pill';
       for (let i = 0; i < 200; i++) demoTick();
       state.timer = setInterval(demoTick, 700);
-      return;
-    }
+    } 
+    else if (mode === 'authenticated') {
+      if (!state.authenticated || !state.ws) {
+        alert('Please connect your Deriv account first');
+        return;
+      }
+      $("sourceTag").textContent = "AUTHENTICATED STREAM";
+      $("status").textContent = "● Live account data";
+      $("status").className = 'pill connected';
 
-    $("status").textContent = "● Connecting…";
-    state.ws = new WebSocket("wss://ws.binaryws.com/websockets/v3");
-
-    state.ws.onopen = () => {
-      state.ws.send(JSON.stringify({
-        ticks_history: $("symbol").value,
-        count: 500,
-        end: "latest",
-        style: "ticks",
-        req_id: 1
-      }));
-
-      state.ws.send(JSON.stringify({
+      // Subscribe to ticks
+      sendWsMessage({
         ticks: $("symbol").value,
         subscribe: 1,
-        req_id: 2
-      }));
+        req_id: state.wsReqId++
+      });
+    }
+    else {
+      // Public ticks mode
+      $("sourceTag").textContent = "DERIV PUBLIC DATA";
+      $("status").textContent = "● Connecting…";
+      $("status").className = 'pill';
 
-      $("status").textContent = "● Live public ticks";
-    };
+      state.ws = new WebSocket(config.DERIV_PUBLIC_WS);
 
-    state.ws.onmessage = event => {
-      const data = JSON.parse(event.data);
+      state.ws.onopen = () => {
+        state.ws.send(JSON.stringify({
+          ticks_history: $("symbol").value,
+          count: 500,
+          end: "latest",
+          style: "ticks",
+          req_id: state.wsReqId++
+        }));
 
-      if (data.msg_type === "history") {
-        data.history.prices.forEach((price, i) => {
-          addTick(+price, data.history.times[i]);
-        });
-      }
+        state.ws.send(JSON.stringify({
+          ticks: $("symbol").value,
+          subscribe: 1,
+          req_id: state.wsReqId++
+        }));
 
-      if (data.msg_type === "tick") {
-        addTick(data.tick.quote, data.tick.epoch);
-      }
-    };
+        $("status").textContent = "● Live public ticks";
+      };
 
-    state.ws.onerror = () => {
-      $("status").textContent = "● Connection failed — choose Demo";
-    };
+      state.ws.onmessage = event => {
+        const data = JSON.parse(event.data);
 
-    state.ws.onclose = () => {
-      if ($("source").value === "deriv") {
-        $("status").textContent = "● Disconnected";
-      }
-    };
+        if (data.msg_type === "history") {
+          data.history.prices.forEach((price, i) => {
+            addTick(+price, data.history.times[i]);
+          });
+        }
+
+        if (data.msg_type === "tick") {
+          addTick(data.tick.quote, data.tick.epoch);
+        }
+      };
+
+      state.ws.onerror = () => {
+        $("status").textContent = "● Connection failed — choose Demo";
+        $("status").className = 'pill error';
+      };
+
+      state.ws.onclose = () => {
+        if ($("source").value === "deriv") {
+          $("status").textContent = "● Disconnected";
+        }
+      };
+    }
   }
 
   $("connect").onclick = start;
