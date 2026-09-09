@@ -20,7 +20,7 @@
     label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
     select,input,button{font:inherit}select,input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#091626;color:var(--text)}
     button{align-self:end;padding:10px 15px;border:0;border-radius:8px;background:var(--cyan);color:#032022;font-weight:750;cursor:pointer;transition:all .2s}
-    button:hover{background:#4dd4c9;transform:translateY(-1px)}
+    button:hover:not(:disabled){background:#4dd4c9;transform:translateY(-1px)}
     button:disabled{background:var(--muted);cursor:not-allowed;opacity:.5}
     .price{font-size:34px;font-weight:750}.tick{color:var(--muted);margin-top:5px}.chart{width:100%;height:210px;background:#081525;border-radius:8px}
     .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}.metric{padding:10px;background:#091626;border-radius:8px}
@@ -36,23 +36,29 @@
     .badge{float:right;padding:3px 7px;border-radius:10px;background:#19314d;color:var(--cyan);font-size:11px}
     
     /* Auth Modal Styles */
-    .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,17,31,.8);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center}
+    .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,17,31,.9);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center}
     .modal-overlay.active{display:flex}
-    .modal{background:linear-gradient(145deg,#0e1d31,#0a1727);border:1px solid var(--line);border-radius:14px;padding:30px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+    .modal{background:linear-gradient(145deg,#0e1d31,#0a1727);border:1px solid var(--line);border-radius:14px;padding:30px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
     .modal h2{margin:0 0 20px;font-size:18px;color:var(--cyan)}
     .modal-field{margin-bottom:16px}
     .modal-field label{display:block;margin-bottom:8px;font-size:11px;color:var(--muted);text-transform:uppercase}
     .modal-field input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#091626;color:var(--text);font-size:13px}
-    .modal-field small{display:block;margin-top:6px;color:var(--muted);font-size:11px}
+    .modal-field select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#091626;color:var(--text);font-size:13px}
+    .modal-field small{display:block;margin-top:6px;color:var(--muted);font-size:11px;line-height:1.4}
+    .modal-field a{color:var(--cyan);text-decoration:none;font-weight:600}
+    .modal-field a:hover{text-decoration:underline}
     .modal-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
-    .modal-buttons button{margin:0;width:100%}
-    .modal-buttons .cancel{background:var(--line);color:var(--text)}
-    .status-badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:12px}
+    .modal-buttons button{margin:0;width:100%;padding:12px}
+    .modal-buttons button.cancel{background:var(--line);color:var(--text)}
+    .modal-buttons button.cancel:hover{background:#2d3e52}
+    .status-badge{display:inline-block;padding:6px 10px;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:12px}
     .status-badge.authenticated{background:#0d2d1a;color:var(--good)}
     .status-badge.unauthenticated{background:#2d0d0d;color:var(--bad)}
     .connection-info{background:#091626;padding:12px;border-radius:8px;margin-bottom:12px;font-size:12px;line-height:1.6;border-left:3px solid var(--cyan)}
-    .connection-info.error{border-left-color:var(--bad)}
-    .connection-info code{background:#132a49;padding:2px 6px;border-radius:3px;color:var(--cyan);font-family:monospace}
+    .connection-info.error{border-left-color:var(--bad);background:#1a0e0e}
+    .connection-info code{background:#132a49;padding:2px 6px;border-radius:3px;color:var(--cyan);font-family:monospace;font-size:10px}
+    .connection-info strong{color:var(--cyan)}
+    .connection-info br{margin:4px 0}
     
     @media(max-width:850px){.controls,.grid{grid-template-columns:1fr}.wide{grid-column:auto}.metrics{grid-template-columns:repeat(2,1fr)}.modal{padding:20px;max-width:90vw}}
   </style>
@@ -64,7 +70,7 @@
     <div class="subtitle">Exploratory tick-pattern analytics for Deriv continuous indices</div>
   </div>
   <div style="display:flex;gap:10px;align-items:center">
-    <button id="authBtn" style="align-self:center;margin:0;padding:8px 12px;font-size:12px">Connect Deriv</button>
+    <button id="authBtn" style="align-self:center;margin:0;padding:8px 12px;font-size:12px">🔐 Connect Deriv</button>
     <div id="status" class="pill">● Demo data</div>
   </div>
 </header>
@@ -167,18 +173,16 @@
 
     <div class="modal-field">
       <label>Personal Access Token (PAT)</label>
-      <input id="patInput" type="password" placeholder="Paste your Deriv PAT here..." />
+      <input id="patInput" type="password" placeholder="Paste your Deriv PAT here..." autocomplete="off" />
       <small>
-        Get your token from: 
-        <a href="https://app.deriv.com/account/api-token/" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600">app.deriv.com/account/api-token/</a>
-        <br>
+        📍 Get your token: <a href="https://app.deriv.com/account/api-token/" target="_blank">app.deriv.com/account/api-token/</a><br>
         Required scopes: <strong>read, trade, payments</strong>
       </small>
     </div>
 
     <div class="modal-field">
       <label>Connection Type</label>
-      <select id="connectionType" style="margin-bottom:8px">
+      <select id="connectionType">
         <option value="authenticated">Authenticated (Real/Demo Account)</option>
         <option value="public">Public Ticks Only</option>
       </select>
@@ -188,11 +192,11 @@
     <div id="connectionStatus" style="display:none;margin:12px 0"></div>
 
     <div class="modal-buttons">
-      <button class="cancel" onclick="document.getElementById('authModal').classList.remove('active')">Cancel</button>
-      <button id="connectBtn" onclick="authenticateDeriv()">Connect</button>
+      <button class="cancel" type="button" id="cancelAuthBtn">Cancel</button>
+      <button id="connectBtn" type="button">Connect</button>
     </div>
 
-    <div id="authLog" style="margin-top:16px;padding:12px;background:#081525;border-radius:8px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:11px;color:#a8bbd4;display:none">
+    <div id="authLog" style="margin-top:16px;padding:12px;background:#081525;border-radius:8px;max-height:150px;overflow-y:auto;font-family:monospace;font-size:10px;color:#a8bbd4;border:1px solid var(--line);display:none;line-height:1.5">
     </div>
   </div>
 </div>
@@ -226,7 +230,7 @@
     const authLog = $('authLog');
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = `[${timestamp}] ${message}`;
-    authLog.innerHTML += logEntry + '\n';
+    authLog.innerHTML += logEntry + '<br>';
     authLog.scrollTop = authLog.scrollHeight;
     console.log(logEntry);
   }
@@ -241,7 +245,7 @@
         <div class="connection-info">
           <strong>Balance:</strong> ${fmt(state.accountInfo.balance || 0)} ${state.accountInfo.currency || 'USD'}<br>
           <strong>Account:</strong> ${state.accountInfo.loginid}<br>
-          <strong>Mode:</strong> ${state.accountInfo.is_virtual ? '🎮 Demo' : '💰 Real'}
+          <strong>Mode:</strong> ${state.accountInfo.is_virtual ? '🎮 Demo Account' : '💰 Real Account'}
         </div>
       `;
     } else {
@@ -262,126 +266,173 @@
     const pat = $('patInput').value.trim();
     const connType = $('connectionType').value;
 
-    if (!pat) {
-      alert('Please enter your Personal Access Token');
+    if (!pat || pat.length === 0) {
+      alert('❌ Please enter your Personal Access Token');
       return;
     }
 
     state.pat = pat;
     $('connectBtn').disabled = true;
+    $('cancelAuthBtn').disabled = true;
     $('authLog').style.display = 'block';
-    $('connectionStatus').innerHTML = '<div class="connection-info">Initializing connection...</div>';
+    $('connectionStatus').innerHTML = '<div class="connection-info">⏳ Initializing connection...</div>';
     $('connectionStatus').style.display = 'block';
 
-    log('Initiating WebSocket connection to Deriv...');
-    log(`App ID: ${config.APP_ID}`);
-    log(`Connection Type: ${connType}`);
+    log('▶ Initiating WebSocket connection to Deriv...');
+    log(`📱 App ID: ${config.APP_ID}`);
+    log(`🔗 Connection Type: ${connType}`);
+    log(`⏱ Timestamp: ${new Date().toLocaleTimeString()}`);
 
-    state.ws = new WebSocket(`${config.DERIV_WS_URL}?app_id=${config.APP_ID}`);
+    try {
+      state.ws = new WebSocket(`${config.DERIV_WS_URL}?app_id=${config.APP_ID}`);
 
-    state.ws.onopen = () => {
-      log('✓ WebSocket opened');
-      log('Sending authorization request...');
+      state.ws.onopen = () => {
+        log('✅ WebSocket connection established');
+        log('🔐 Sending authorization request with PAT...');
 
-      sendWsMessage({
-        authorize: pat
-      });
-    };
+        sendWsMessage({
+          authorize: pat,
+          req_id: 1
+        });
+      };
 
-    state.ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      state.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-      if (data.msg_type === 'authorize') {
-        if (data.authorize) {
-          state.authenticated = true;
-          state.accountInfo = data.authorize;
-          log(`✓ Authorization successful`);
-          log(`Login ID: ${data.authorize.loginid}`);
-          log(`Currency: ${data.authorize.currency}`);
-          log(`Account Type: ${data.authorize.is_virtual ? 'Demo' : 'Real'}`);
-          log(`Balance: ${fmt(data.authorize.balance)}`);
+          if (data.msg_type === 'authorize') {
+            if (data.authorize) {
+              state.authenticated = true;
+              state.accountInfo = data.authorize;
+              
+              log(`✅ Authorization successful!`);
+              log(`👤 Login ID: ${data.authorize.loginid}`);
+              log(`💱 Currency: ${data.authorize.currency}`);
+              log(`📊 Account Type: ${data.authorize.is_virtual ? 'Demo' : 'Real'}`);
+              log(`💰 Balance: ${fmt(data.authorize.balance || 0)} ${data.authorize.currency}`);
 
-          $('connectionStatus').innerHTML = `
-            <div class="connection-info" style="border-left-color:var(--good)">
-              <strong>✓ Successfully Connected!</strong><br>
-              Account: ${data.authorize.loginid}<br>
-              Balance: ${fmt(data.authorize.balance)} ${data.authorize.currency}<br>
-              Mode: ${data.authorize.is_virtual ? '🎮 Demo Account' : '💰 Real Account'}
-            </div>
-          `;
+              $('connectionStatus').innerHTML = `
+                <div class="connection-info" style="border-left-color:var(--good);background:#0d2d1a">
+                  <strong>✅ Successfully Connected!</strong><br>
+                  Account: <code>${data.authorize.loginid}</code><br>
+                  Balance: ${fmt(data.authorize.balance || 0)} ${data.authorize.currency}<br>
+                  Mode: ${data.authorize.is_virtual ? '🎮 Demo Account' : '💰 Real Account'}
+                </div>
+              `;
 
-          updateAuthStatus();
+              updateAuthStatus();
 
-          // Update UI
-          $('sourceTag').textContent = `AUTHENTICATED - ${data.authorize.loginid}`;
-          $('status').textContent = `● Connected`;
-          $('status').className = 'pill connected';
+              // Update UI
+              $('sourceTag').textContent = `AUTHENTICATED - ${data.authorize.loginid}`;
+              $('status').textContent = `✓ Connected`;
+              $('status').className = 'pill connected';
 
-          // Enable authenticated source option
-          const sourceSelect = $('source');
-          if (sourceSelect.querySelector('option[value="authenticated"]')) {
-            sourceSelect.value = 'authenticated';
+              // Enable authenticated source option
+              const sourceSelect = $('source');
+              if (sourceSelect.querySelector('option[value="authenticated"]')) {
+                sourceSelect.value = 'authenticated';
+              }
+
+              log('✨ Connection modal will close in 3 seconds...');
+
+              // Close modal after a delay
+              setTimeout(() => {
+                $('authModal').classList.remove('active');
+                $('connectBtn').disabled = false;
+                $('cancelAuthBtn').disabled = false;
+              }, 3000);
+
+            } else if (data.error) {
+              log(`❌ Authorization failed`);
+              log(`Error: ${data.error.message}`);
+              
+              $('connectionStatus').innerHTML = `
+                <div class="connection-info error">
+                  <strong>❌ Connection Failed</strong><br>
+                  Error: ${data.error.message}<br>
+                  <small>Check your PAT validity and try again</small>
+                </div>
+              `;
+              $('connectBtn').disabled = false;
+              $('cancelAuthBtn').disabled = false;
+              if (state.ws) state.ws.close();
+            }
           }
 
-          // Close modal after a short delay
-          setTimeout(() => {
-            $('authModal').classList.remove('active');
-            $('connectBtn').disabled = false;
-          }, 1500);
+          if (data.msg_type === 'tick') {
+            if (state.ticks.length < 5000) {
+              addTick(data.tick.quote, data.tick.epoch);
+            }
+          }
 
-        } else if (data.error) {
-          log(`✗ Authorization failed: ${data.error.message}`);
-          $('connectionStatus').innerHTML = `
-            <div class="connection-info error">
-              <strong>✗ Connection Failed</strong><br>
-              Error: ${data.error.message}<br>
-              <small>Check your PAT and try again</small>
-            </div>
-          `;
+          if (data.msg_type === 'history') {
+            if (data.history && data.history.prices) {
+              data.history.prices.forEach((price, i) => {
+                addTick(+price, data.history.times[i]);
+              });
+            }
+          }
+        } catch (err) {
+          log(`⚠ Parse error: ${err.message}`);
+          console.error(err);
+        }
+      };
+
+      state.ws.onerror = (error) => {
+        log(`❌ WebSocket error occurred`);
+        log(`Error: ${error || 'Unknown error'}`);
+        
+        $('connectionStatus').innerHTML = `
+          <div class="connection-info error">
+            <strong>❌ Connection Error</strong><br>
+            Check your internet connection and try again
+          </div>
+        `;
+        $('connectBtn').disabled = false;
+        $('cancelAuthBtn').disabled = false;
+      };
+
+      state.ws.onclose = () => {
+        log('❌ WebSocket connection closed');
+        if (!state.authenticated) {
           $('connectBtn').disabled = false;
-          if (state.ws) state.ws.close();
+          $('cancelAuthBtn').disabled = false;
         }
-      }
-
-      if (data.msg_type === 'tick') {
-        if (state.ticks.length < 5000) {
-          addTick(data.tick.quote, data.tick.epoch);
-        }
-      }
-
-      if (data.msg_type === 'history') {
-        if (data.history && data.history.prices) {
-          data.history.prices.forEach((price, i) => {
-            addTick(+price, data.history.times[i]);
-          });
-        }
-      }
-    };
-
-    state.ws.onerror = (error) => {
-      log(`✗ WebSocket error: ${error}`);
+      };
+    } catch (err) {
+      log(`❌ Error: ${err.message}`);
       $('connectionStatus').innerHTML = `
         <div class="connection-info error">
-          <strong>✗ Connection Error</strong><br>
-          Check your internet connection and try again
+          <strong>❌ Connection Setup Failed</strong><br>
+          ${err.message}
         </div>
       `;
       $('connectBtn').disabled = false;
-    };
-
-    state.ws.onclose = () => {
-      log('WebSocket closed');
-      if (!state.authenticated) {
-        $('connectBtn').disabled = false;
-      }
-    };
+      $('cancelAuthBtn').disabled = false;
+    }
   }
 
   $('authBtn').onclick = () => {
     $('authModal').classList.add('active');
     $('authLog').style.display = 'none';
     $('connectionStatus').style.display = 'none';
+    $('patInput').value = '';
+    $('connectBtn').disabled = false;
+    $('cancelAuthBtn').disabled = false;
     $('patInput').focus();
+  };
+
+  $('cancelAuthBtn').onclick = () => {
+    $('authModal').classList.remove('active');
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+      state.ws.close();
+    }
+  };
+
+  $('connectBtn').onclick = authenticateDeriv;
+
+  $('patInput').onkeypress = (e) => {
+    if (e.key === 'Enter') authenticateDeriv();
   };
 
   $('connectionType').onchange = function() {
@@ -549,7 +600,7 @@
       `[${new Date().toLocaleTimeString()}] Window recalculated`,
       `Current digit ${current} → strongest observed transition: ${nextWinner} (${(probabilities[nextWinner] * 100).toFixed(1)}%)`,
       `Entropy ${entropy.toFixed(3)}; ${entropy > 3.2 ? "distribution is near-uniform." : "distribution differs from uniform in this sample."}`,
-      state.authenticated ? "Connected to Deriv authenticated account" : "Running in demo/public mode"
+      state.authenticated ? "✓ Connected to Deriv authenticated account" : "Running in demo/public mode"
     ].map(x => `<div>${x}</div>`).join("");
 
     draw(quotes);
@@ -622,7 +673,7 @@
     } 
     else if (mode === 'authenticated') {
       if (!state.authenticated || !state.ws) {
-        alert('Please connect your Deriv account first');
+        alert('⚠️  Please connect your Deriv account first using the "Connect Deriv" button');
         return;
       }
       $("sourceTag").textContent = "AUTHENTICATED STREAM";
