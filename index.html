@@ -38,7 +38,7 @@
     /* Auth Modal Styles */
     .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,17,31,.9);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center}
     .modal-overlay.active{display:flex}
-    .modal{background:linear-gradient(145deg,#0e1d31,#0a1727);border:1px solid var(--line);border-radius:14px;padding:30px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
+    .modal{background:linear-gradient(145deg,#0e1d31,#0a1727);border:1px solid var(--line);border-radius:14px;padding:30px;max-width:550px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
     .modal h2{margin:0 0 20px;font-size:18px;color:var(--cyan)}
     .modal-field{margin-bottom:16px}
     .modal-field label{display:block;margin-bottom:8px;font-size:11px;color:var(--muted);text-transform:uppercase}
@@ -58,7 +58,6 @@
     .connection-info.error{border-left-color:var(--bad);background:#1a0e0e}
     .connection-info code{background:#132a49;padding:2px 6px;border-radius:3px;color:var(--cyan);font-family:monospace;font-size:10px}
     .connection-info strong{color:var(--cyan)}
-    .connection-info br{margin:4px 0}
     
     @media(max-width:850px){.controls,.grid{grid-template-columns:1fr}.wide{grid-column:auto}.metrics{grid-template-columns:repeat(2,1fr)}.modal{padding:20px;max-width:90vw}}
   </style>
@@ -164,39 +163,32 @@
 <!-- Authentication Modal -->
 <div id="authModal" class="modal-overlay">
   <div class="modal">
-    <h2>🔐 Connect Deriv Account</h2>
+    <h2>🔐 Connect Deriv Account (PAT)</h2>
     
     <div class="connection-info">
       <strong>App ID:</strong> <code>34lVzR8IROjFvmgQbW8PX</code><br>
-      <small>Registered & configured for authenticated trading connections</small>
+      <strong>Endpoint:</strong> <code>wss://ws.deriv.com/websockets/v3</code><br>
+      <small>Official Deriv WebSocket API v3 for Personal Access Tokens</small>
     </div>
 
     <div class="modal-field">
       <label>Personal Access Token (PAT)</label>
-      <input id="patInput" type="password" placeholder="Paste your Deriv PAT here..." autocomplete="off" />
+      <input id="patInput" type="password" placeholder="Paste your Deriv PAT token here..." autocomplete="off" />
       <small>
-        📍 Get your token: <a href="https://app.deriv.com/account/api-token/" target="_blank">app.deriv.com/account/api-token/</a><br>
-        Required scopes: <strong>read, trade, payments</strong>
+        📍 Get your PAT: <a href="https://app.deriv.com/account/api-token/" target="_blank">app.deriv.com/account/api-token/</a><br>
+        ✓ Minimum scopes: <strong>read, trade</strong> (payments optional)<br>
+        ℹ️ Token format: 32-40 alphanumeric characters
       </small>
-    </div>
-
-    <div class="modal-field">
-      <label>Connection Type</label>
-      <select id="connectionType">
-        <option value="authenticated">Authenticated (Real/Demo Account)</option>
-        <option value="public">Public Ticks Only</option>
-      </select>
-      <small id="connTypeInfo">Connect to your Deriv account for live trading and account data access.</small>
     </div>
 
     <div id="connectionStatus" style="display:none;margin:12px 0"></div>
 
     <div class="modal-buttons">
       <button class="cancel" type="button" id="cancelAuthBtn">Cancel</button>
-      <button id="connectBtn" type="button">Connect</button>
+      <button id="connectBtn" type="button">Connect PAT</button>
     </div>
 
-    <div id="authLog" style="margin-top:16px;padding:12px;background:#081525;border-radius:8px;max-height:150px;overflow-y:auto;font-family:monospace;font-size:10px;color:#a8bbd4;border:1px solid var(--line);display:none;line-height:1.5">
+    <div id="authLog" style="margin-top:16px;padding:12px;background:#081525;border-radius:8px;max-height:160px;overflow-y:auto;font-family:monospace;font-size:10px;color:#a8bbd4;border:1px solid var(--line);display:none;line-height:1.6">
     </div>
   </div>
 </div>
@@ -213,11 +205,12 @@
   const state = {
     ticks: [],
     ws: null,
+    authWs: null,
     timer: null,
     authenticated: false,
     accountInfo: null,
     pat: null,
-    wsReqId: 1,
+    wsReqId: 100,
     subscriptions: new Set()
   };
 
@@ -253,21 +246,27 @@
     }
   }
 
-  function sendWsMessage(message) {
-    if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
-      console.error('WebSocket not open');
+  function sendAuthMessage(message) {
+    if (!state.authWs || state.authWs.readyState !== WebSocket.OPEN) {
+      console.error('Auth WebSocket not open');
       return false;
     }
-    state.ws.send(JSON.stringify(message));
+    state.authWs.send(JSON.stringify(message));
     return true;
   }
 
   function authenticateDeriv() {
     const pat = $('patInput').value.trim();
-    const connType = $('connectionType').value;
 
     if (!pat || pat.length === 0) {
+      log('❌ Error: PAT field is empty');
       alert('❌ Please enter your Personal Access Token');
+      return;
+    }
+
+    if (pat.length < 30) {
+      log('❌ Error: PAT too short (should be 32-40 characters)');
+      alert('❌ PAT appears invalid (too short). Check token length.');
       return;
     }
 
@@ -275,124 +274,178 @@
     $('connectBtn').disabled = true;
     $('cancelAuthBtn').disabled = true;
     $('authLog').style.display = 'block';
-    $('connectionStatus').innerHTML = '<div class="connection-info">⏳ Initializing connection...</div>';
+    $('connectionStatus').innerHTML = '<div class="connection-info">⏳ Initiating PAT connection...</div>';
     $('connectionStatus').style.display = 'block';
 
-    log('▶ Initiating WebSocket connection to Deriv...');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━');
+    log('🔐 DERIV PAT AUTHENTICATION FLOW');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     log(`📱 App ID: ${config.APP_ID}`);
-    log(`🔗 Connection Type: ${connType}`);
-    log(`⏱ Timestamp: ${new Date().toLocaleTimeString()}`);
+    log(`📍 Endpoint: ${config.DERIV_WS_URL}`);
+    log(`⏱️  Timestamp: ${new Date().toLocaleTimeString()}`);
+    log('');
+    log('▶️  Step 1: Opening WebSocket connection...');
 
     try {
-      state.ws = new WebSocket(`${config.DERIV_WS_URL}?app_id=${config.APP_ID}`);
+      // Close any existing auth connection
+      if (state.authWs) {
+        state.authWs.close();
+      }
 
-      state.ws.onopen = () => {
-        log('✅ WebSocket connection established');
-        log('🔐 Sending authorization request with PAT...');
+      // Create new WebSocket connection for authentication
+      state.authWs = new WebSocket(`${config.DERIV_WS_URL}?app_id=${config.APP_ID}`);
 
-        sendWsMessage({
-          authorize: pat,
-          req_id: 1
+      state.authWs.onopen = () => {
+        log('✅ WebSocket opened successfully');
+        log('');
+        log('▶️  Step 2: Sending PAT authorization message...');
+        log(`📤 Message: { "authorize": "[PAT]" }`);
+        
+        // Send authorization with PAT
+        sendAuthMessage({
+          authorize: pat
         });
+
+        // Set timeout for response
+        setTimeout(() => {
+          if (!state.authenticated && state.authWs && state.authWs.readyState === WebSocket.OPEN) {
+            log('❌ Timeout: No response from server after 10 seconds');
+            log('❌ Possible causes:');
+            log('   - Invalid or expired PAT');
+            log('   - Token missing required scopes');
+            log('   - Network connectivity issue');
+            $('connectionStatus').innerHTML = `
+              <div class="connection-info error">
+                <strong>❌ Connection Timeout</strong><br>
+                No response after 10 seconds. Check PAT validity.
+              </div>
+            `;
+            $('connectBtn').disabled = false;
+            $('cancelAuthBtn').disabled = false;
+            state.authWs.close();
+          }
+        }, 10000);
       };
 
-      state.ws.onmessage = (event) => {
+      state.authWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          log(`📥 Response received: ${data.msg_type || 'unknown'}`);
 
           if (data.msg_type === 'authorize') {
             if (data.authorize) {
               state.authenticated = true;
               state.accountInfo = data.authorize;
               
-              log(`✅ Authorization successful!`);
+              log('');
+              log('✅ ✅ ✅ AUTHORIZATION SUCCESSFUL ✅ ✅ ✅');
+              log('');
               log(`👤 Login ID: ${data.authorize.loginid}`);
               log(`💱 Currency: ${data.authorize.currency}`);
               log(`📊 Account Type: ${data.authorize.is_virtual ? 'Demo' : 'Real'}`);
               log(`💰 Balance: ${fmt(data.authorize.balance || 0)} ${data.authorize.currency}`);
+              log(`🎯 Account Status: Active`);
 
               $('connectionStatus').innerHTML = `
                 <div class="connection-info" style="border-left-color:var(--good);background:#0d2d1a">
-                  <strong>✅ Successfully Connected!</strong><br>
-                  Account: <code>${data.authorize.loginid}</code><br>
+                  <strong>✅ PAT Authentication Successful!</strong><br>
+                  Login: <code>${data.authorize.loginid}</code><br>
                   Balance: ${fmt(data.authorize.balance || 0)} ${data.authorize.currency}<br>
-                  Mode: ${data.authorize.is_virtual ? '🎮 Demo Account' : '💰 Real Account'}
+                  Type: ${data.authorize.is_virtual ? '🎮 Demo Account' : '💰 Real Account'}
                 </div>
               `;
 
               updateAuthStatus();
 
-              // Update UI
+              // Update main UI
               $('sourceTag').textContent = `AUTHENTICATED - ${data.authorize.loginid}`;
               $('status').textContent = `✓ Connected`;
               $('status').className = 'pill connected';
 
-              // Enable authenticated source option
+              // Enable authenticated source
               const sourceSelect = $('source');
               if (sourceSelect.querySelector('option[value="authenticated"]')) {
                 sourceSelect.value = 'authenticated';
               }
 
-              log('✨ Connection modal will close in 3 seconds...');
+              log('');
+              log('⏳ Modal will close in 2 seconds...');
 
-              // Close modal after a delay
               setTimeout(() => {
                 $('authModal').classList.remove('active');
                 $('connectBtn').disabled = false;
                 $('cancelAuthBtn').disabled = false;
-              }, 3000);
+              }, 2000);
 
             } else if (data.error) {
-              log(`❌ Authorization failed`);
-              log(`Error: ${data.error.message}`);
+              log('');
+              log('❌ ❌ ❌ AUTHORIZATION FAILED ❌ ❌ ❌');
+              log('');
+              log(`Error Code: ${data.error.code || 'Unknown'}`);
+              log(`Error Message: ${data.error.message || 'Unknown error'}`);
+              log('');
+              log('🔍 Troubleshooting:');
               
+              if (data.error.message.includes('Invalid') || data.error.message.includes('invalid')) {
+                log('   → PAT is invalid or malformed');
+                log('   → Regenerate PAT from: app.deriv.com/account/api-token/');
+              } else if (data.error.message.includes('Expired') || data.error.message.includes('expired')) {
+                log('   → PAT has expired');
+                log('   → Create a new PAT from: app.deriv.com/account/api-token/');
+              } else if (data.error.message.includes('scope') || data.error.message.includes('Scope')) {
+                log('   → PAT missing required scopes');
+                log('   → Ensure scopes include: read, trade');
+              } else {
+                log('   → Verify PAT is correct and not expired');
+                log('   → Try refreshing PAT from Deriv account settings');
+              }
+
               $('connectionStatus').innerHTML = `
                 <div class="connection-info error">
-                  <strong>❌ Connection Failed</strong><br>
+                  <strong>❌ PAT Authentication Failed</strong><br>
                   Error: ${data.error.message}<br>
-                  <small>Check your PAT validity and try again</small>
+                  <small><a href="https://app.deriv.com/account/api-token/" target="_blank">Regenerate your PAT</a></small>
                 </div>
               `;
+              
               $('connectBtn').disabled = false;
               $('cancelAuthBtn').disabled = false;
-              if (state.ws) state.ws.close();
+              if (state.authWs) state.authWs.close();
             }
-          }
-
-          if (data.msg_type === 'tick') {
+          } else if (data.msg_type === 'balance') {
+            log(`💰 Balance Update: ${fmt(data.balance.balance)} ${data.balance.currency}`);
+          } else if (data.msg_type === 'tick') {
             if (state.ticks.length < 5000) {
               addTick(data.tick.quote, data.tick.epoch);
             }
           }
-
-          if (data.msg_type === 'history') {
-            if (data.history && data.history.prices) {
-              data.history.prices.forEach((price, i) => {
-                addTick(+price, data.history.times[i]);
-              });
-            }
-          }
         } catch (err) {
-          log(`⚠ Parse error: ${err.message}`);
+          log(`⚠️  Parse error: ${err.message}`);
           console.error(err);
         }
       };
 
-      state.ws.onerror = (error) => {
-        log(`❌ WebSocket error occurred`);
-        log(`Error: ${error || 'Unknown error'}`);
+      state.authWs.onerror = (error) => {
+        log('');
+        log('❌ WebSocket Connection Error');
+        log(`Error: ${error.message || 'Unknown error'}`);
+        log('');
+        log('Common causes:');
+        log('   - Network connectivity issue');
+        log('   - Firewall blocking WebSocket connection');
+        log('   - Deriv server temporarily unavailable');
         
         $('connectionStatus').innerHTML = `
           <div class="connection-info error">
             <strong>❌ Connection Error</strong><br>
-            Check your internet connection and try again
+            WebSocket failed to open. Check your internet connection.
           </div>
         `;
         $('connectBtn').disabled = false;
         $('cancelAuthBtn').disabled = false;
       };
 
-      state.ws.onclose = () => {
+      state.authWs.onclose = () => {
         log('❌ WebSocket connection closed');
         if (!state.authenticated) {
           $('connectBtn').disabled = false;
@@ -400,10 +453,10 @@
         }
       };
     } catch (err) {
-      log(`❌ Error: ${err.message}`);
+      log(`❌ Fatal Error: ${err.message}`);
       $('connectionStatus').innerHTML = `
         <div class="connection-info error">
-          <strong>❌ Connection Setup Failed</strong><br>
+          <strong>❌ Setup Error</strong><br>
           ${err.message}
         </div>
       `;
@@ -424,8 +477,8 @@
 
   $('cancelAuthBtn').onclick = () => {
     $('authModal').classList.remove('active');
-    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-      state.ws.close();
+    if (state.authWs && state.authWs.readyState === WebSocket.OPEN) {
+      state.authWs.close();
     }
   };
 
@@ -433,15 +486,6 @@
 
   $('patInput').onkeypress = (e) => {
     if (e.key === 'Enter') authenticateDeriv();
-  };
-
-  $('connectionType').onchange = function() {
-    const info = $('connTypeInfo');
-    if (this.value === 'authenticated') {
-      info.textContent = 'Connect to your Deriv account for live trading and account data access.';
-    } else {
-      info.textContent = 'Stream public market data without authentication.';
-    }
   };
 
   function lastDigit(q) {
@@ -457,13 +501,11 @@
   function rsi(a, n = 14) {
     if (a.length <= n) return null;
     let gain = 0, loss = 0;
-
     for (let i = a.length - n; i < a.length; i++) {
       const d = a[i] - a[i - 1];
       if (d > 0) gain += d;
       else loss -= d;
     }
-
     return loss === 0 ? 100 : 100 - (100 / (1 + gain / loss));
   }
 
@@ -516,19 +558,11 @@
     const streak = runs(digits);
 
     const transitionBias = total ? Math.max(...probabilities) - 0.1 : 0;
-    const trend = Math.min(
-      0.2,
-      Math.abs(up - 0.5) + Math.abs((currentRsi ?? 50) - 50) / 250
-    );
-
-    const score = Math.round(
-      Math.min(99, Math.max(1, (transitionBias * 0.55 + trend * 0.45) * 210))
-    );
+    const trend = Math.min(0.2, Math.abs(up - 0.5) + Math.abs((currentRsi ?? 50) - 50) / 250);
+    const score = Math.round(Math.min(99, Math.max(1, (transitionBias * 0.55 + trend * 0.45) * 210)));
 
     $("price").textContent = fmt(quotes.at(-1));
-    $("tickInfo").textContent =
-      `Last digit ${current} · ${new Date(a.at(-1).epoch * 1000).toLocaleTimeString()} · ${N}-tick window`;
-
+    $("tickInfo").textContent = `Last digit ${current} · ${new Date(a.at(-1).epoch * 1000).toLocaleTimeString()} · ${N}-tick window`;
     $("rsi").textContent = currentRsi ? currentRsi.toFixed(1) : "—";
     $("momentum").textContent = (momentum >= 0 ? "+" : "") + momentum.toFixed(3);
     $("vol").textContent = volatility.toFixed(3);
@@ -540,12 +574,7 @@
     $("score").className = "score " + (score > 65 ? "high" : score > 38 ? "mid" : "low");
     $("scoreBar").style.width = score + "%";
 
-    $("verdict").textContent =
-      score > 65
-        ? "A detectable but unverified bias — validate out of sample."
-        : score > 38
-          ? "Weak evidence — no actionable confidence."
-          : "No meaningful edge detected.";
+    $("verdict").textContent = score > 65 ? "A detectable but unverified bias — validate out of sample." : score > 38 ? "Weak evidence — no actionable confidence." : "No meaningful edge detected.";
 
     const signalRows = [
       ["Transition", `After ${current}, digit ${nextWinner} occurred ${(probabilities[nextWinner] * 100).toFixed(1)}% of ${total} observations.`],
@@ -553,55 +582,17 @@
       ["Streak", `${streak} consecutive ${current}s.`]
     ];
 
-    $("signals").innerHTML = signalRows.map(([name, detail]) => `
-      <div class="signal">
-        <i class="dot"></i>
-        <div><strong>${name}</strong><small>${detail}</small></div>
-      </div>
-    `).join("");
+    $("signals").innerHTML = signalRows.map(([name, detail]) => `<div class="signal"><i class="dot"></i><div><strong>${name}</strong><small>${detail}</small></div></div>`).join("");
+    $("digits").innerHTML = frequency.map((value, digit) => `<div class="digit"><b>${digit}</b><small>${(value / N * 100).toFixed(1)}%</small></div>`).join("");
+    $("digitSummary").textContent = `Most frequent: ${frequency.indexOf(Math.max(...frequency))} · Expected near 10% each in a uniform sequence.`;
 
-    $("digits").innerHTML = frequency.map((value, digit) => `
-      <div class="digit"><b>${digit}</b><small>${(value / N * 100).toFixed(1)}%</small></div>
-    `).join("");
+    $("matrix").innerHTML = '<div class="head"></div>' + Array.from({ length: 10 }, (_, i) => `<div class="head">${i}</div>`).join("") + T.map((r, i) => `<div class="head">${i}</div>` + r.map(v => { const rowTotal = r.reduce((x, y) => x + y, 0); const percent = rowTotal ? Math.round(v / rowTotal * 100) : "—"; const intensity = Math.min(.82, .08 + v / Math.max(1, ...r) * .74); return `<div style="background:rgba(95,225,212,${intensity})">${percent}</div>`; }).join("")).join("");
 
-    $("digitSummary").textContent =
-      `Most frequent: ${frequency.indexOf(Math.max(...frequency))} · Expected near 10% each in a uniform sequence.`;
+    const prediction = (name, value, detail) => `<div class="signal"><i class="dot" style="background:${value > .55 ? "var(--good)" : "var(--warn)"}"></i><div><strong>${name}: ${(value * 100).toFixed(1)}%</strong><small>${detail}</small></div></div>`;
 
-    $("matrix").innerHTML =
-      '<div class="head"></div>' +
-      Array.from({ length: 10 }, (_, i) => `<div class="head">${i}</div>`).join("") +
-      T.map((r, i) =>
-        `<div class="head">${i}</div>` +
-        r.map(v => {
-          const rowTotal = r.reduce((x, y) => x + y, 0);
-          const percent = rowTotal ? Math.round(v / rowTotal * 100) : "—";
-          const intensity = Math.min(.82, .08 + v / Math.max(1, ...r) * .74);
-          return `<div style="background:rgba(95,225,212,${intensity})">${percent}</div>`;
-        }).join("")
-      ).join("");
+    $("contractSignals").innerHTML = prediction("Rise / Fall", Math.max(up, 1 - up), `${up >= .5 ? "Rise" : "Fall"} frequency in window; this is not a forecast.`) + prediction("Even / Odd", Math.max(even, 1 - even), `${even >= .5 ? "Even" : "Odd"} occurred more often.`) + prediction(`Over / Under ${threshold}`, Math.max(over, 1 - over), `${over >= .5 ? "Over" : "Under"} frequency in window.`) + prediction("Matches", probabilities[nextWinner], `Highest observed next-digit transition: ${nextWinner}.`);
 
-    const prediction = (name, value, detail) => `
-      <div class="signal">
-        <i class="dot" style="background:${value > .55 ? "var(--good)" : "var(--warn)"}"></i>
-        <div><strong>${name}: ${(value * 100).toFixed(1)}%</strong><small>${detail}</small></div>
-      </div>`;
-
-    $("contractSignals").innerHTML =
-      prediction("Rise / Fall", Math.max(up, 1 - up),
-        `${up >= .5 ? "Rise" : "Fall"} frequency in window; this is not a forecast.`) +
-      prediction("Even / Odd", Math.max(even, 1 - even),
-        `${even >= .5 ? "Even" : "Odd"} occurred more often.`) +
-      prediction(`Over / Under ${threshold}`, Math.max(over, 1 - over),
-        `${over >= .5 ? "Over" : "Under"} frequency in window.`) +
-      prediction("Matches", probabilities[nextWinner],
-        `Highest observed next-digit transition: ${nextWinner}.`);
-
-    $("log").innerHTML = [
-      `[${new Date().toLocaleTimeString()}] Window recalculated`,
-      `Current digit ${current} → strongest observed transition: ${nextWinner} (${(probabilities[nextWinner] * 100).toFixed(1)}%)`,
-      `Entropy ${entropy.toFixed(3)}; ${entropy > 3.2 ? "distribution is near-uniform." : "distribution differs from uniform in this sample."}`,
-      state.authenticated ? "✓ Connected to Deriv authenticated account" : "Running in demo/public mode"
-    ].map(x => `<div>${x}</div>`).join("");
+    $("log").innerHTML = [`[${new Date().toLocaleTimeString()}] Window recalculated`, `Current digit ${current} → strongest observed transition: ${nextWinner} (${(probabilities[nextWinner] * 100).toFixed(1)}%)`, `Entropy ${entropy.toFixed(3)}; ${entropy > 3.2 ? "distribution is near-uniform." : "distribution differs from uniform in this sample."}`, state.authenticated ? "✓ Connected to Deriv authenticated account" : "Running in demo/public mode"].map(x => `<div>${x}</div>`).join("");
 
     draw(quotes);
   }
@@ -661,7 +652,6 @@
   function start() {
     stop();
     state.ticks = [];
-
     const mode = $("source").value;
 
     if (mode === 'demo') {
@@ -670,25 +660,22 @@
       $("status").className = 'pill';
       for (let i = 0; i < 200; i++) demoTick();
       state.timer = setInterval(demoTick, 700);
-    } 
-    else if (mode === 'authenticated') {
-      if (!state.authenticated || !state.ws) {
-        alert('⚠️  Please connect your Deriv account first using the "Connect Deriv" button');
+    } else if (mode === 'authenticated') {
+      if (!state.authenticated || !state.authWs || state.authWs.readyState !== WebSocket.OPEN) {
+        alert('⚠️ Please connect your Deriv account first using "Connect Deriv"');
         return;
       }
       $("sourceTag").textContent = "AUTHENTICATED STREAM";
       $("status").textContent = "● Live account data";
       $("status").className = 'pill connected';
 
-      // Subscribe to ticks
-      sendWsMessage({
+      // Subscribe to ticks on authenticated connection
+      state.authWs.send(JSON.stringify({
         ticks: $("symbol").value,
         subscribe: 1,
         req_id: state.wsReqId++
-      });
-    }
-    else {
-      // Public ticks mode
+      }));
+    } else {
       $("sourceTag").textContent = "DERIV PUBLIC DATA";
       $("status").textContent = "● Connecting…";
       $("status").className = 'pill';
@@ -715,13 +702,9 @@
 
       state.ws.onmessage = event => {
         const data = JSON.parse(event.data);
-
         if (data.msg_type === "history") {
-          data.history.prices.forEach((price, i) => {
-            addTick(+price, data.history.times[i]);
-          });
+          data.history.prices.forEach((price, i) => addTick(+price, data.history.times[i]));
         }
-
         if (data.msg_type === "tick") {
           addTick(data.tick.quote, data.tick.epoch);
         }
